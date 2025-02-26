@@ -1,0 +1,311 @@
+using System.Net.Sockets;
+
+{
+
+
+    const string CestaKSouboruParkVolno06 = "C:\\Users\\c4210\\source\\repos\\Parkoviste_06\\ParkVolno06.txt"; // připavíme si cestu, abychom ji nemuseli stále opisovat
+    const string CestaKSouboruParkCenik06 = "C:\\Users\\c4210\\source\\repos\\Parkoviste_06\\ParkCenik06.txt"; // připavíme si cestu, abychom ji nemuseli stále opisovat
+
+
+    // proměnné
+    int CenaAuto = 0;
+    int CenaBus = 0;
+    int CenaMoto = 0;
+
+    int Auto = 50;//kapacita parkoviště pro auto
+    int Bus = 5;//kapacita parkoviště pro bus
+    int Moto = 10;//kapacita parkoviště pro moto
+
+    int volba = 1;  // proměnná  pro volbu Switch Case
+    string input = ""; // vstup z klávesníce
+    int beep = 1;
+
+    int VolnoAuto = Auto;//počet volných míst auto
+    int VolnoBus = Bus;//počet volných míst bus
+    int VolnoMoto = Moto;//počet volných míst moto
+
+    int Pokladna = 0; // stav pokladny
+
+    //Načtení ceníku parkoviště
+
+    if (!File.Exists(CestaKSouboruParkCenik06))   //pokud soubor neexistuje to je ten vykřičník, tak se vytvoří
+        File.Create(CestaKSouboruParkCenik06).Dispose();   // vytvoří se soubor v C:\Users\c4210\source\repos
+
+    if (File.Exists(CestaKSouboruParkCenik06))
+    {
+        using (StreamReader from_txt_cenik = new StreamReader(CestaKSouboruParkCenik06)) //připravíme si soubor pro čtení
+        {
+            // Read each line and parse it into the corresponding variable
+            CenaAuto = int.Parse(from_txt_cenik.ReadLine());
+            CenaBus = int.Parse(from_txt_cenik.ReadLine());
+            CenaMoto = int.Parse(from_txt_cenik.ReadLine());
+        }
+    }
+    else
+    {
+        Console.WriteLine("The file does not exist.");
+    }
+
+
+
+
+    // úvodní informace
+
+    Console.ForegroundColor = ConsoleColor.Yellow;
+    Console.WriteLine("      PARKOVIŠTĚ MALIK");
+    Console.WriteLine("  Provozní doba 8:00 - 21:00");
+    Console.WriteLine(" Odpovědný vedoucí Šimon Malík");
+    Console.WriteLine("     IČO: 564548795142");
+    //informace o obsazení parkoviště
+    Console.WriteLine("********************************\n");
+    Console.ForegroundColor = ConsoleColor.White;
+
+    do
+    {
+        // Načtení z TXT souboru  -- pozor načte se to jako string!
+
+        if (!File.Exists(CestaKSouboruParkVolno06))   //pokud soubor neexistuje to je ten vykřičník, tak se vytvoří
+            File.Create(CestaKSouboruParkVolno06).Dispose();   // vytvoří se soubor v C:\Users\c4210\source\repos
+
+
+        using (StreamReader from_txt_volno = new StreamReader(CestaKSouboruParkVolno06)) //připravíme si soubor pro čtení
+        {
+            // Read each line and parse it into the corresponding variable
+            Pokladna = int.Parse(from_txt_volno.ReadLine());
+            VolnoAuto = int.Parse(from_txt_volno.ReadLine());
+            VolnoBus = int.Parse(from_txt_volno.ReadLine());
+            VolnoMoto = int.Parse(from_txt_volno.ReadLine());
+        }
+
+        if (Pokladna == 0)
+        {
+            Auto = VolnoAuto;
+            Bus = VolnoBus;
+            Moto = VolnoMoto;
+
+
+        }
+
+
+
+
+
+
+        Console.SetCursorPosition(0, 6);
+        Console.WriteLine("Počet volných míst");
+        if (VolnoAuto < 3) { beep = 1; RedWarningBeep(VolnoAuto, VolnoBus, VolnoMoto, beep); } // červený podklad upozorní na kapacitu menší než 3
+        Console.WriteLine("  auto....{0,3}", VolnoAuto);
+        Console.ResetColor();
+
+        if (VolnoBus < 3) { beep = 2; RedWarningBeep(VolnoAuto, VolnoBus, VolnoMoto, beep); } // červený podklad upozorní na kapacitu menší než 3
+        Console.WriteLine("  bus.....{0,3}", VolnoBus);
+        Console.ResetColor();
+
+        if (VolnoMoto < 3) { beep = 3; RedWarningBeep(VolnoAuto, VolnoBus, VolnoMoto, beep); } // červený podklad upozorní na kapacitu menší než 3
+        Console.WriteLine("  moto....{0,3}\n", VolnoMoto);
+        Console.ResetColor();
+
+        //Hlavní Menu
+        Console.ForegroundColor = ConsoleColor.Green;
+
+        Console.WriteLine("  Vjezd vozidla");
+        Console.WriteLine($"  1.........AUTO.....{CenaAuto}Kč");
+        Console.WriteLine($"  2.........BUS.....{CenaBus}Kč");
+        Console.WriteLine($"  3.........MOTO.....{CenaMoto}Kč\n");
+        Console.ForegroundColor = ConsoleColor.Cyan;
+
+        Console.WriteLine("  Odjezd vozidla");
+        Console.WriteLine("  4.........AUTO");
+        Console.WriteLine("  5.........BUS");
+        Console.WriteLine("  6.........MOTO\n");
+        Console.ForegroundColor = ConsoleColor.White;
+
+        Console.WriteLine("  *******************");
+        Console.WriteLine("  7.........POKLADNA");
+        Console.WriteLine("  8.........INVENTURA + Vynulování POKLADNY (pouze při prázdném parkovišti)");
+        Console.WriteLine("  0.........KONEC (zbytek v pokladně 500Kč");
+
+
+        Console.SetCursorPosition(1, 26);
+        Console.Write("Zvol možnost na číselné klávesnici a Potvrď ENTER   ");
+        Console.ForegroundColor = ConsoleColor.DarkGray;
+        Console.Write("\n\nPři příjezdu vozidla zvol jednu z možností 1 - 3  ");
+        Console.Write("Při odjezdu vozidla zvol jednu z možností 4 - 6  ");
+        Console.Write("Lze zvolit vždy pouze jeden vjezd/odjezd a potvrdit ENTER");
+        Console.ResetColor();
+        //Console.SetCursorPosition(52, 26);
+
+
+        do // ošetření proti zadání písmen nebo samotného ENTER
+        {
+            Console.SetCursorPosition(52, 26);
+
+            input = Console.ReadLine();
+
+            Console.SetCursorPosition(52, 26);
+            Console.WriteLine("                            ");
+        } while (!int.TryParse(input, out volba));
+
+        Console.SetCursorPosition(0, 10);// vymaže řádek o stavu pokladny
+        Console.WriteLine("                        ");
+
+        switch (volba)   // hlavní tělo programu
+        {
+            case 1:
+                {
+                    //Přijelo auto - odečte se volné místo na parkovišti
+                    //do pokladny se připočte poplatek
+                    if (VolnoAuto > 0)
+                    {
+                        VolnoAuto--;   // změna
+                        Pokladna += CenaAuto;
+                    }
+                    break;
+                }
+            case 2:
+                {
+                    //Přijel bus - odečte se volné místo na parkovišti
+                    //do pokladny se připočte poplatek
+                    if (VolnoBus > 0)
+                    {
+                        VolnoBus--;
+                        Pokladna += CenaBus;
+                    }
+                    break;
+                }
+            case 3:
+                {
+                    //Přijelo moto - odečte se volné místo na parkovišti
+                    //do pokladny se připočte poplatek
+                    if (VolnoMoto > 0)
+                    {
+                        VolnoMoto--;
+                        Pokladna += CenaMoto;
+                    }
+                    break;
+                }
+            case 4:
+                {
+                    //Odjelo auto - přičte se volné místo na parkovišti
+                    if (VolnoAuto < Auto)
+                    {
+                        VolnoAuto++; //změna
+                    }
+                    break;
+                }
+            case 5:
+                {
+                    //Odjel bus - přičte se volné místo na parkovišti
+                    if (VolnoBus < Bus)
+                    {
+                        VolnoBus++;
+                    }
+                    break;
+                }
+            case 6:
+                {
+                    //Odjelo moto - přičte se volné místo na parkovišti
+                    if (VolnoMoto < Moto)
+                    {
+                        VolnoMoto++;
+                    }
+                    break;
+                }
+            case 7:
+                {
+                    // výpis pokladny
+                    Console.SetCursorPosition(0, 10);
+                    Console.WriteLine($"Pokladna......{Pokladna}");
+                    break;
+
+                }
+            case 8:
+                {
+                    // vynulování  pokladny
+                    Console.SetCursorPosition(0, 10);
+                    Console.WriteLine($"INVENTURA STAV......{Pokladna}");
+
+                    if (VolnoAuto == Auto && VolnoBus == Bus && VolnoMoto == Moto)
+                        Pokladna = 0;
+
+                    break;
+
+                }
+            default:
+                break;
+                //Console.ReadLine();
+        }
+
+        // uložení do TXT souboru 
+
+        if (!File.Exists(CestaKSouboruParkVolno06))   //pokud soubor neexistuje to je ten vykřičník, tak se vytvoří
+            File.Create(CestaKSouboruParkVolno06).Dispose();   // vytvoří se soubor v C:\Users\c4210\source\repos
+
+
+
+        //Načtení do TXT souboru  -- pozor načte se to jako string!
+
+
+        using (StreamWriter to_txt_volno = new StreamWriter(CestaKSouboruParkVolno06)) //připravíme si soubor pro zápis 
+        {
+
+            to_txt_volno.WriteLine(Pokladna); //zapsání do souboru Park06.txt
+            to_txt_volno.WriteLine(VolnoAuto);
+            to_txt_volno.WriteLine(VolnoBus);
+            to_txt_volno.WriteLine(VolnoMoto);
+
+        }
+    }
+
+
+
+
+    while (volba != 0 || VolnoAuto != Auto || VolnoBus != Bus || VolnoMoto != Moto); // program lze ukončit "0", ale musí být prázdné parkoviště
+
+
+    if (Pokladna > 500)
+    {
+        Pokladna = 500; // zbytek v pokladně
+        using (StreamWriter to_txt_volno = new StreamWriter(CestaKSouboruParkVolno06)) //připravíme si soubor pro zápis 
+        {
+
+            to_txt_volno.WriteLine(Pokladna);
+
+            to_txt_volno.WriteLine(VolnoAuto);
+            to_txt_volno.WriteLine(VolnoBus);
+            to_txt_volno.WriteLine(VolnoMoto);
+
+        }
+    }
+    Console.SetCursorPosition(0, 28);
+
+
+
+
+
+    static void RedWarningBeep(int VolnoAuto, int VolnoBus, int VolnoMoto, int beep)
+    {
+        Console.BackgroundColor = ConsoleColor.Red;
+        switch (beep)
+        {
+
+            case 1:
+                {
+                    if (VolnoAuto == 1) Console.Beep(300, 500);
+                    break;
+                }
+            case 2:
+                {
+                    if (VolnoBus == 1) Console.Beep(500, 500);
+                    break;
+                }
+            case 3:
+                {
+                    if (VolnoMoto == 1) Console.Beep(700, 500);
+                    break;
+                }
+            default:
+                break;
+        }
+    }
+}
